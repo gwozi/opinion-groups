@@ -36,30 +36,28 @@ to setup-plot
 end
 
 to go
-  if schedule = "Random independent" [
-    repeat count turtles [
-      ask one-of turtles [
-        survey-nearby
-        express-opinion
-      ]
-    ]
-  ]
 
-  if schedule = "Random order" [
+  if express-schedule = "Asynchronous" [
     ask turtles [
      survey-nearby
      express-opinion
     ]
-  ]
-
-  if schedule = "Synchronous" [
+  ]if express-schedule = "Synchronous" [
     ask turtles [ survey-nearby ]
     ask turtles [ express-opinion ]
   ]
 
   ask turtles [ update-plot ]
-  ask patches [ gather-opinion ]
-  ask turtles [ approach-allies ]
+
+  if relocate-schedule = "Synchronous" [
+     ask patches [ gather-opinion ]
+  ]
+
+  if relocate-strategy = "Approach Allies" [
+    ask turtles [ approach-allies ]
+  ]if relocate-strategy = "Randomly-roam" [
+    ask turtles [ randomly-roam ]
+  ]
 
   tick
 end
@@ -72,19 +70,27 @@ end
 
 to approach-allies
  if abs(expr-opinion - true-opinion) > deviation-extent [
-    let available-patches (patches in-radius social-radius with [not any? turtles-here])
+    let available-patches (patches in-radius social-radius) with [not any? turtles-here]
+    if allow-overlap? [ set available-patches (patches in-radius social-radius) ]
     if any? available-patches[
+      if relocate-schedule = "Asynchronous"[ ask available-patches [gather-opinion]]
       move-to min-one-of available-patches [abs(near-opinion - [true-opinion] of myself)]
+      ;move-to one-of available-patches
     ]
   ]
 end
 
+to randomly-roam
+  let available-patches (patches in-radius social-radius) with [not any? turtles-here]
+  if allow-overlap? [ set available-patches (patches in-radius social-radius) ]
+  if any? available-patches[ move-to one-of available-patches ]
+end
+
 to survey-nearby
   let nearby-others turtles in-radius social-radius
-  let eligible-others nearby-others with [abs(expr-opinion - [true-opinion] of myself) < similarity-threshold]
-  if any? eligible-others [
-    set next-opinion mean [expr-opinion] of eligible-others
-  ]
+  let friends nearby-others with [abs(expr-opinion - [true-opinion] of myself) < similarity-threshold]
+  ; at least self is a friend
+  set next-opinion mean [expr-opinion] of friends
 end
 
 
@@ -109,13 +115,13 @@ to-report bound [ value low high ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-445
-27
-977
-560
+476
+26
+976
+526
 -1
 -1
-11.15
+12.5745
 1
 10
 1
@@ -136,10 +142,10 @@ ticks
 30.0
 
 BUTTON
-137
-46
-203
-79
+141
+32
+207
+65
 NIL
 setup
 NIL
@@ -153,10 +159,10 @@ NIL
 1
 
 BUTTON
-234
-46
-297
-79
+238
+32
+301
+65
 NIL
 go
 T
@@ -170,10 +176,10 @@ NIL
 1
 
 PLOT
-53
-111
-427
-388
+57
+97
+431
+374
 Opinion over Time
 NIL
 NIL
@@ -187,10 +193,10 @@ false
 PENS
 
 PLOT
-53
-432
-433
-687
+57
+418
+437
+673
 Opinion Distribution
 NIL
 NIL
@@ -205,10 +211,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [expr-opinion] of turtles"
 
 SLIDER
-485
-581
-714
-614
+478
+550
+707
+583
 agent-num
 agent-num
 100
@@ -220,10 +226,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-486
-645
-709
-678
+481
+668
+704
+701
 deviation-extent
 deviation-extent
 0
@@ -235,10 +241,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-736
-582
-947
-615
+481
+732
+707
+766
 similarity-threshold
 similarity-threshold
 0
@@ -250,20 +256,20 @@ NIL
 HORIZONTAL
 
 CHOOSER
-734
-641
-952
-686
-schedule
-schedule
-"Synchronous" "Random order" "Random independent"
+735
+550
+953
+595
+express-schedule
+express-schedule
+"Synchronous" "Asynchronous"
 0
 
 SLIDER
-487
-705
-711
-738
+480
+605
+704
+638
 social-radius
 social-radius
 0
@@ -273,6 +279,37 @@ social-radius
 1
 NIL
 HORIZONTAL
+
+CHOOSER
+737
+607
+946
+652
+relocate-schedule
+relocate-schedule
+"Synchronous" "Asynchronous"
+0
+
+SWITCH
+738
+734
+957
+767
+allow-overlap?
+allow-overlap?
+1
+1
+-1000
+
+CHOOSER
+735
+670
+954
+715
+relocate-strategy
+relocate-strategy
+"Randomly Roam" "Approach Allies"
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
